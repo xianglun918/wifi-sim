@@ -1,0 +1,23 @@
+{
+  "skill_name": "wifi-simulation-workflow",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "我想从户型图开始，完整跑一遍 WiFi 信号覆盖仿真和网络性能分析流程",
+      "expected_output": "生成 grid_map.npy、rssi_matrix.npy、throughput_map.npy 等文件，以及 network_metrics.json 包含吞吐量/延迟/丢包率统计",
+      "files": []
+    },
+    {
+      "id": 2,
+      "prompt": "我有一张户型图在 data/my_floorplan.jpg，想知道在这房子里放 3 个 AP 的信号覆盖怎么样，最后输出网络性能指标",
+      "expected_output": "执行完整工作流：户型图→栅格→信号→网络，输出 rssi_heatmap.png、network_dashboard.png、network_metrics.json",
+      "files": ["data/my_floorplan.jpg"]
+    },
+    {
+      "id": 3,
+      "prompt": "用 mock 数据跑一下 01 02 03 三个脚本的完整流程，验证一下工作流是否正常",
+      "expected_output": "依次执行三个脚本，使用 data/mock_floorplan_100/ 的数据，最终输出 network_metrics.json",
+      "files": []
+    }
+  ]
+}

@@ -1,0 +1,16 @@
+{
+  "width": 400,
+  "height": 400,
+  "scale": 7.08,
+  "scale_unit": "meters_per_pixel",
+  "real_width_m": 2832.0,
+  "real_height_m": 2832.0,
+  "material_map": {
+    "0": "空旷",
+    "1": "砖墙",
+    "2": "门",
+    "3": "窗",
+    "4": "混凝土"
+  },
+  "source": "contour_detection"
+}
