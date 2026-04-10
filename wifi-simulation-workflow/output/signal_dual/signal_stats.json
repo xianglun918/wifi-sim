@@ -1,0 +1,30 @@
+{
+  "mean_rssi": -69.4,
+  "median_rssi": -65.9,
+  "min_rssi": -100.0,
+  "max_rssi": -12.27,
+  "std_rssi": 17.79,
+  "coverage_area_m2": 168.91,
+  "quality_distribution": {
+    "excellent": {
+      "count": 520,
+      "percentage": 0.77
+    },
+    "good": {
+      "count": 7497,
+      "percentage": 11.1
+    },
+    "fair": {
+      "count": 31279,
+      "percentage": 46.3
+    },
+    "poor": {
+      "count": 16274,
+      "percentage": 24.09
+    },
+    "very_poor": {
+      "count": 11993,
+      "percentage": 17.75
+    }
+  }
+}

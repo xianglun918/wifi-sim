@@ -70,13 +70,14 @@ app = typer.Typer(
 )
 console = Console()
 
+# Material IDs aligned with 01_floorplan_process.py:
+# 0=空旷, 1=砖墙, 2=门, 3=窗, 4=混凝土
 MATERIALS: Dict[int, Dict[str, Any]] = {
     0: {"name": "空旷", "attenuation": 0},
-    1: {"name": "混凝土墙", "attenuation": 25},
-    2: {"name": "砖墙", "attenuation": 12},
-    3: {"name": "木门", "attenuation": 3},
-    4: {"name": "玻璃窗", "attenuation": 5},
-    5: {"name": "石膏板", "attenuation": 4},
+    1: {"name": "砖墙", "attenuation": 12},
+    2: {"name": "门", "attenuation": 3},
+    3: {"name": "窗", "attenuation": 5},
+    4: {"name": "混凝土", "attenuation": 25},
 }
 
 MATERIAL_COLORS: Dict[int, Tuple[int, int, int]] = {
@@ -229,9 +230,6 @@ def calculate_coverage(
 
     for py in range(grid_map.height):
         for px in range(grid_map.width):
-            if grid_map.grid[py, px] != 0:
-                continue
-
             x, y = grid_map.pixel_to_meter(px, py)
 
             max_rssi = -100.0
@@ -594,7 +592,7 @@ def simulate(
     ),
     colormap: str = Option("RdYlGn", "--colormap", "-c", help="热力图颜色映射"),
     visualize: bool = Option(False, "--visualize", "-v", help="显示可视化结果"),
-    fast: bool = Option(False, "--fast", help="使用快速模式（向量化计算，适合大网格）"),
+    fast: bool = Option(True, "--fast", help="使用快速模式（向量化计算，适合大网格）"),
 ) -> None:
     """
     信号强度仿真：输入栅格+AP位置，输出信号强度矩阵
@@ -825,24 +823,30 @@ def simulate(
 
 def _estimate_wall_attenuation_vectorized(
     wall_grid: np.ndarray,
-    ap_px: int,
-    ap_py: int,
+    ap_x: float,
+    ap_y: float,
     x_coords: np.ndarray,
     y_coords: np.ndarray,
 ) -> np.ndarray:
     height, width = wall_grid.shape
     attenuation = np.zeros((height, width), dtype=np.float32)
 
-    WALL_ATTEN = 12
-    wall_density = (wall_grid == 1).astype(float) * 0.3
-    wall_density += (wall_grid == 2).astype(float) * 0.1
-    wall_density += (wall_grid == 3).astype(float) * 0.15
-
-    dx = x_coords - ap_px
-    dy = y_coords - ap_py
+    # Distance in meters from AP to each pixel
+    dx = x_coords - ap_x
+    dy = y_coords - ap_y
     distance = np.sqrt(dx**2 + dy**2) + 1e-6
 
-    attenuation = wall_density * distance * 0.1 * WALL_ATTEN
+    # Average weighted attenuation per wall type
+    # Based on typical indoor floorplan wall density
+    WEIGHTED_WALL_ATTEN = 4.0  # 平均每米穿墙衰减 (dB/m)
+
+    # 基础穿墙衰减：与距离成正比
+    attenuation = WEIGHTED_WALL_ATTEN * distance
+
+    # 额外衰减：墙体密集区域的像素额外衰减
+    WALL_DENSITY_BONUS = 2.0  # 位于墙体像素的额外加成
+    wall_mask = wall_grid > 0
+    attenuation += wall_mask.astype(np.float32) * WALL_DENSITY_BONUS * (distance / 10.0)
 
     return attenuation
 
@@ -873,19 +877,14 @@ def calculate_coverage_fast(
         else:
             fspl = 20 * np.log10(distances) + 20 * np.log10(frequency * 1000) - 27.55
 
-        ap_px = int(ap_x / grid_map.scale)
-        ap_py = int(ap_y / grid_map.scale)
-
         wall_attenuation = _estimate_wall_attenuation_vectorized(
-            grid_map.grid, ap_px, ap_py, x_coords, y_coords
+            grid_map.grid, ap_x, ap_y, x_meters, y_meters
         )
 
         total_loss = fspl + wall_attenuation
         rssi = tx_power - total_loss
 
         rssi_matrix = np.maximum(rssi_matrix, rssi)
-
-    rssi_matrix[grid_map.grid != 0] = -100.0
 
     return rssi_matrix
 

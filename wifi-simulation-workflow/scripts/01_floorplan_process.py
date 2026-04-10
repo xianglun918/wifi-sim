@@ -44,6 +44,7 @@ from typing_extensions import Annotated
 
 # ================= 常量定义 =================
 DEFAULT_GRID_SIZE = 400
+DEFAULT_SCALE = 0.05  # 0.05 m/px = 5cm/px, 400px = 20m (适合室内户型图)
 DEFAULT_SMODEL_PATH = "models/65s.pt"
 DEFAULT_DMODEL_PATH = "models/911checkpoint_best_ema.pth"
 DEFAULT_CONF = 0.55
@@ -590,10 +591,10 @@ def create_mock_grid_with_materials(
     """
     image = cv2.imread(str(image_path))
     if image is None:
-        return np.zeros((grid_size, grid_size), dtype=np.uint8), 0.1
+        return np.zeros((grid_size, grid_size), dtype=np.uint8), DEFAULT_SCALE
 
     h, w = image.shape[:2]
-    scale = min(w, h) / grid_size
+    scale = DEFAULT_SCALE
 
     # 转换为灰度图
     gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
@@ -949,7 +950,7 @@ def process_floorplan(
 
     if walls_json:
         grid = walls_json_to_grid(walls_json, (h, w), grid_size)
-        computed_scale = max(w, h) / grid_size * 0.01
+        computed_scale = DEFAULT_SCALE
     else:
         print("  使用轮廓检测...")
         grid, computed_scale = create_mock_grid_with_materials(input_image, grid_size)
