@@ -1086,6 +1086,15 @@ class Room:
 
 
 @dataclass
+class Door:
+    x1: float
+    y1: float
+    x2: float
+    y2: float
+    label: str = ""
+
+
+@dataclass
 class AP:
     x: float
     y: float
@@ -1107,6 +1116,7 @@ class FloorPlan:
     height: float
     rooms: list[Room] = field(default_factory=list)
     walls: list[Wall] = field(default_factory=list)
+    doors: list[Door] = field(default_factory=list)
     aps: list[AP] = field(default_factory=list)
     stas: list[STA] = field(default_factory=list)
 
@@ -1206,6 +1216,58 @@ def create_large_flat() -> FloorPlan:
     ]
     fp.aps = [AP(4.5, 3.0, label="AP1")]
     return fp
+
+
+def _apply_doors_to_large_flat(fp: FloorPlan) -> None:
+    fp.walls = [
+        Wall(0, 0, 3, 0, 10, ""),
+        Wall(4.5, 0, 15, 0, 10, ""),
+        Wall(15, 0, 15, 12, 10, ""),
+        Wall(15, 12, 0, 12, 10, ""),
+        Wall(0, 12, 0, 0, 10, ""),
+        Wall(9, 0, 9, 1.5, 6, ""),
+        Wall(9, 3.5, 9, 4, 6, ""),
+        Wall(9, 4, 9, 4.5, 6, ""),
+        Wall(9, 5.5, 9, 6, 6, ""),
+        Wall(9, 4, 10, 4, 4, ""),
+        Wall(11.5, 4, 12, 4, 4, ""),
+        Wall(12, 4, 13, 4, 4, ""),
+        Wall(14, 4, 15, 4, 4, ""),
+        Wall(12, 4, 12, 4.5, 4, ""),
+        Wall(12, 5.5, 12, 6, 4, ""),
+        Wall(0, 6, 1.5, 6, 6, ""),
+        Wall(3.5, 6, 5, 6, 6, ""),
+        Wall(5, 6, 6, 6, 6, ""),
+        Wall(7, 6, 8, 6, 6, ""),
+        Wall(8, 6, 10.5, 6, 6, ""),
+        Wall(11.5, 6, 12, 6, 6, ""),
+        Wall(12, 6, 13, 6, 6, ""),
+        Wall(14, 6, 15, 6, 6, ""),
+        Wall(5, 6, 5, 7, 6, ""),
+        Wall(5, 8, 5, 9, 6, ""),
+        Wall(5, 9, 5, 10, 6, ""),
+        Wall(5, 11, 5, 12, 6, ""),
+        Wall(5, 9, 6, 9, 4, ""),
+        Wall(7.5, 9, 8, 9, 4, ""),
+        Wall(10, 6, 10, 10, 6, ""),
+        Wall(10, 11, 10, 12, 6, ""),
+    ]
+    fp.doors = [
+        Door(3, 0, 4.5, 0, "客餐厅门"),
+        Door(9, 1.5, 9, 3.5, "厨房门"),
+        Door(9, 4.5, 9, 5.5, "客餐厅-卫生间1门"),
+        Door(10, 4, 11.5, 4, "卫生间1门"),
+        Door(13, 4, 14, 4, "厨房-书房门"),
+        Door(12, 4.5, 12, 5.5, "卫生间1-书房门"),
+        Door(1.5, 6, 3.5, 6, "主卧门"),
+        Door(6, 6, 7, 6, "客餐厅-主卫门"),
+        Door(5, 7, 5, 8, "主卧-主卫门"),
+        Door(5, 10, 5, 11, "主卧-次卧1门"),
+        Door(6, 9, 7.5, 9, "主卫-次卧1门"),
+        Door(10.5, 6, 11.5, 6, "卫生间1-次卧2门"),
+        Door(13, 6, 14, 6, "书房-次卧2门"),
+        Door(10, 10, 10, 11, "次卧2门"),
+    ]
 
 
 PRESETS: dict[str, callable] = {
@@ -1526,7 +1588,12 @@ def _rssi_cmap():
     return LinearSegmentedColormap.from_list("rssi", colors)
 
 
-def _draw_floorplan(ax, fp):
+def _draw_doors(ax, fp):
+    # 门仅表现为墙体空缺，此处不绘制任何额外图形
+    pass
+
+
+def _draw_floorplan(ax, fp, show_doors: bool = False):
     for room in fp.rooms:
         rect = plt.Rectangle(
             (room.x, room.y),
@@ -1581,6 +1648,9 @@ def _draw_floorplan(ax, fp):
             fontweight="bold",
         )
 
+    if show_doors:
+        _draw_doors(ax, fp)
+
     ax.set_xlim(-0.5, fp.width + 0.5)
     ax.set_ylim(-0.5, fp.height + 0.5)
     ax.set_aspect("equal")
@@ -1596,8 +1666,11 @@ def generate_rssi_heatmap(
     ap_count: int,
     output_path: str,
     grid_size: int = GRID_SIZE,
+    show_doors: bool = False,
 ):
     fp = PRESETS[preset_name]()
+    if preset_name == "大平层" and show_doors:
+        _apply_doors_to_large_flat(fp)
     _layout_aps(fp, ap_count)
 
     X, Y, rssi = compute_heatmap(fp, grid_size=grid_size)
@@ -1609,7 +1682,7 @@ def generate_rssi_heatmap(
     cbar = fig.colorbar(im, ax=ax)
     cbar.set_label("RSSI (dBm)")
 
-    _draw_floorplan(ax, fp)
+    _draw_floorplan(ax, fp, show_doors=show_doors)
 
     avg_rssi = float(np.mean(_inner(rssi)))
     worst_rssi = float(np.min(_inner(rssi)))
@@ -1631,8 +1704,11 @@ def generate_stall_grid(
     ap_count: int,
     output_path: str,
     grid_size: int = GRID_SIZE,
+    show_doors: bool = False,
 ):
     fp = PRESETS[preset_name]()
+    if preset_name == "大平层" and show_doors:
+        _apply_doors_to_large_flat(fp)
     _layout_aps(fp, ap_count)
 
     engine = SimulationEngine()
@@ -1664,7 +1740,7 @@ def generate_stall_grid(
     cbar = fig.colorbar(sc, ax=ax)
     cbar.set_label("卡顿率 (%)")
 
-    _draw_floorplan(ax, fp)
+    _draw_floorplan(ax, fp, show_doors=show_doors)
 
     title = (
         f"{fp.name} RTMP 卡顿率栅格图 | AP={ap_count} | 分辨率 {grid_size}x{grid_size}\n"
@@ -1724,11 +1800,14 @@ def generate_ap_optimization_comparison(
     target_ap_count: int,
     output_dir: str,
     grid_size: int = GRID_SIZE,
+    show_doors: bool = False,
 ):
     if target_ap_count <= current_ap_count:
         raise ValueError("target_ap_count 必须大于 current_ap_count")
 
     fp_before = PRESETS[preset_name]()
+    if preset_name == "大平层" and show_doors:
+        _apply_doors_to_large_flat(fp_before)
     _layout_aps(fp_before, current_ap_count)
 
     fp_after = _copy.deepcopy(fp_before)
@@ -1768,7 +1847,7 @@ def generate_ap_optimization_comparison(
             Xs, Ys, rssi, cmap=_rssi_cmap(), shading="auto", vmin=-90, vmax=-30
         )
         fig.colorbar(im, ax=ax, label="RSSI (dBm)")
-        _draw_floorplan(ax, fp)
+        _draw_floorplan(ax, fp, show_doors=show_doors)
         inner_rssi = _inner(rssi)
         avg = float(np.mean(inner_rssi))
         worst = float(np.min(inner_rssi))
@@ -1805,7 +1884,7 @@ def generate_ap_optimization_comparison(
             edgecolors="none",
         )
         fig.colorbar(sc, ax=ax, label="卡顿率 (%)")
-        _draw_floorplan(ax, fp)
+        _draw_floorplan(ax, fp, show_doors=show_doors)
         ax.set_title(
             f"{label}\n平均: {inner_stall.mean():.2f}% | 峰值: {inner_stall.max():.2f}%"
         )
@@ -1868,6 +1947,7 @@ def run_all(
     ap_count: int,
     output_dir: str,
     grid_size: int = GRID_SIZE,
+    show_doors: bool = False,
 ):
     out = Path(output_dir)
     out.mkdir(parents=True, exist_ok=True)
@@ -1876,12 +1956,14 @@ def run_all(
         ap_count,
         str(out / f"{preset_name}_rssi_ap{ap_count}.png"),
         grid_size=grid_size,
+        show_doors=show_doors,
     )
     generate_stall_grid(
         preset_name,
         ap_count,
         str(out / f"{preset_name}_stall_ap{ap_count}.png"),
         grid_size=grid_size,
+        show_doors=show_doors,
     )
 
 
@@ -1897,11 +1979,19 @@ if __name__ == "__main__":
     parser.add_argument(
         "--grid-size", type=int, default=GRID_SIZE, help="栅格分辨率（NxN）"
     )
+    parser.add_argument(
+        "--show-doors", action="store_true", help="在户型图上显示门（仅大平层）"
+    )
     args = parser.parse_args()
 
     if args.compare:
         result = generate_ap_optimization_comparison(
-            args.preset, args.ap, args.target_ap, args.out_dir, grid_size=args.grid_size
+            args.preset,
+            args.ap,
+            args.target_ap,
+            args.out_dir,
+            grid_size=args.grid_size,
+            show_doors=args.show_doors,
         )
         print("对比图:")
         print("  RSSI:", result["rssi_comparison"])
@@ -1917,5 +2007,11 @@ if __name__ == "__main__":
         print("  Stall before:", result["stall_before_json"])
         print("  Stall after :", result["stall_after_json"])
     else:
-        run_all(args.preset, args.ap, args.out_dir, grid_size=args.grid_size)
+        run_all(
+            args.preset,
+            args.ap,
+            args.out_dir,
+            grid_size=args.grid_size,
+            show_doors=args.show_doors,
+        )
         print(f"输出完成，请查看 {args.out_dir}")
