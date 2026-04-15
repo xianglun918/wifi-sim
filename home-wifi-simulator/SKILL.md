@@ -36,17 +36,17 @@ uv pip install numpy pyyaml matplotlib
 ```bash
 cd skills/home-wifi-simulator
 
-# 能力 1+2：生成信号热力图 + 卡顿率栅格图（默认大平层，栅格 40×40）
-python skill.py --preset 大平层 --ap 1 --out-dir ./output
+# 能力 1+2：生成信号热力图 + 卡顿率栅格图（默认大平层，栅格 40×40，显示门洞）
+python skill.py --preset 大平层 --ap 1 --out-dir ./output --show-doors
 
 # 使用 20×20 栅格（更快）
-python skill.py --preset 大平层 --ap 1 --grid-size 20 --out-dir ./output
+python skill.py --preset 大平层 --ap 1 --grid-size 20 --out-dir ./output --show-doors
 
-# 能力 3：1AP → 3AP 补点优化对比（默认大平层）
-python skill.py --preset 大平层 --ap 1 --target-ap 3 --compare --out-dir ./output
+# 能力 3：1AP → 3AP 补点优化对比（默认大平层，显示门洞）
+python skill.py --preset 大平层 --ap 1 --target-ap 3 --compare --out-dir ./output --show-doors
 
-# 大平层显示门（墙体空缺，影响信号仿真）
-python skill.py --preset 大平层 --ap 1 --out-dir ./output --show-doors
+# 大平层不显示门洞（恢复完整墙体）
+python skill.py --preset 大平层 --ap 1 --out-dir ./output
 ```
 
 Python API 调用示例：
@@ -145,12 +145,15 @@ result = generate_ap_optimization_comparison(
 每个户型已内置外墙（高衰减 ~10dB）和内墙（低衰减 4~6dB）。
 
 **大平层门洞模拟**：
-- 默认情况下大平层墙体完整（无门洞），与所有户型保持一致。
-- 通过 `--show-doors`（CLI）或 `show_doors=True`（API）可启用**门洞模式**：
-  - 在相邻房间之间的内墙上生成 14 处墙体空缺（门洞）
-  - 门洞处无线段，因此信号穿墙时**不计算该段墙体衰减**
-  - 这会轻微提升全屋平均 RSSI（约 +2~3 dB），并降低门洞附近的卡顿率
-  - 图上仅显示墙体空缺，不绘制门扇符号
+- 通过 `--show-doors`（CLI）或 `show_doors=True`（API）可启用**门洞模式**。
+- 所有 CLI 使用示例均默认携带 `--show-doors`，但参数本身为可选项；不传则大平层与一/二/三居室一样显示完整墙体。
+- 门洞布局遵循户型逻辑：
+  - 主卫仅与主卧相通（套房逻辑）
+  - 每个房间至少有一扇门
+  - 每扇门仅连接两个房间
+  - 共 **8 处门洞**
+- 门洞处无线段，因此信号穿墙时**不计算该段墙体衰减**，全屋平均 RSSI 约提升 +1~2 dB。
+- 图上仅显示墙体空缺，不绘制门扇符号
 
 ## 中文字体配置
 
